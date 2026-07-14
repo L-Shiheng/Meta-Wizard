@@ -11,18 +11,6 @@ st.set_page_config(
 )
 
 # ==============================================================================
-# 自定义 CSS 样式，美化界面
-# ==============================================================================
-st.markdown("""
-<style>
-    .main-title { font-size: 2.2rem; font-weight: 700; color: #1E3A8A; margin-bottom: 1rem; }
-    .section-title { font-size: 1.5rem; font-weight: 600; color: #2563EB; margin-top: 1.5rem; margin-bottom: 1rem; }
-    .step-card { background-color: #F8FAFC; padding: 1.2rem; border-left: 5px solid #3B82F6; border-radius: 4px; margin-bottom: 1rem; }
-    .highlight-text { color: #D97706; font-weight: 600; }
-</style>
-""", unsafe_allowed_html=True)
-
-# ==============================================================================
 # 侧边栏导航控制中心
 # ==============================================================================
 st.sidebar.image("https://img.icons8.com/external-flatart-icons-flat-flatart-icons/128/external-laboratory-science-flatart-icons-flat-flatart-icons-1.png", width=80)
@@ -36,13 +24,13 @@ main_module = st.sidebar.radio(
 )
 
 st.sidebar.divider()
-st.sidebar.info("💡 **提示**：本系统已剔除 GC-MS/MS 相关内容，当前完全聚焦于基于液相色谱-质谱 (LC-MS) 的分析技术路线。")
+st.sidebar.info("💡 提示：本系统已剔除 GC-MS/MS 相关内容，当前完全聚焦于基于液相色谱-质谱 (LC-MS) 的分析技术路线。")
 
 # ==============================================================================
 # 核心模块一：非靶向代谢组学 (Untargeted Metabolomics)
 # ==============================================================================
 if main_module == "非靶向代谢组学 (Untargeted)":
-    st.markdown('<div class="main-title">🎯 非靶向代谢组学一站式工作流</div>', unsafe_allowed_html=True)
+    st.header("🎯 非靶向代谢组学一站式工作流")
     
     # 建立实验流程的四大子选项卡
     sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
@@ -56,7 +44,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
     # 子模块 1：样品前处理 SOP
     # --------------------------------------------------------------------------
     with sub_tab1:
-        st.markdown('<div class="section-title">🧪 实验第一步：标准化样品前处理</div>', unsafe_allowed_html=True)
+        st.subheader("🧪 实验第一步：标准化样品前处理")
         
         # 交互选择基质与分析目标
         col1, col2 = st.columns(2)
@@ -174,7 +162,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                 with step_a:
                     if "悬浮细胞" in cell_method:
                         st.markdown("""
-                        1. 细胞长至目标密度后（约 ~2×10⁶ 细胞/皿），**800 rpm** 离心 **5 分钟**，完全吸除上清培养基。
+                        1. 细胞长至目标密度后（约 2×10^6 细胞/皿），**800 rpm** 离心 **5 分钟**，完全吸除上清培养基。
                         2. 用 **1 mL 温 PBS** 快速洗涤 1 次，**800 rpm** 再次离心 **5 分钟**，完全吸除 PBS。
                         3. 将含有细胞沉淀的离心管迅速放置在干冰上，加入 **1000 μL** 预冷的提取液。
                         4. 放置在 **-80 ℃** 下孵育至少 **40 分钟**。
@@ -203,7 +191,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                 step_a, step_b = st.tabs(["1. 冻融裂解与定量", "2. MTBE 脂质萃取与干燥"])
                 with step_a:
                     st.markdown("""
-                    1. 取约 $5 \\times 10^6$ 个细胞沉淀与 **400 μL 水** 混合。
+                    1. 取约 5×10^6 个细胞沉淀与 **400 μL 水** 混合。
                     2. 涡旋 30 秒，投入液氮中快速孵育 **1 分钟**。随后取出在室温下解冻，并在 4 ℃ 水浴超声 **10 分钟**。重复该“液氮冻融-超声”循环共 **3 次**。
                     3. **4 ℃、13000 rpm** 离心 **15 分钟**。取 **10 μL** 上清液使用 BCA 试剂盒测定蛋白质浓度。
                     """)
@@ -220,24 +208,23 @@ if main_module == "非靶向代谢组学 (Untargeted)":
         elif matrix == "尿液 (Urine)":
             st.caption("🎯 当前方法来源：Zhu Lab 尿液极性代谢物甲醇沉淀法 (zhulab.cn)")
             st.markdown("""
-            <div class="step-card">
-                <b>标准实验步骤：</b><br>
-                1. 向 <b>100 μL</b> 尿液中加入 <b>400 μL 纯甲醇 (MeOH)</b>。<br>
-                2. 涡旋混匀 <b>30 秒</b>，然后在 <b>4 ℃</b> 水浴中超声 <b>10 分钟</b>。<br>
-                3. 转移至 <b>-20 ℃</b> 冰箱中孵育 <b>1 小时</b> 以促进尿蛋白完全沉淀。<br>
-                4. 在 <b>4 ℃</b> 下以 <b>13000 rpm</b> 速度高转速离心 <b>15 分钟</b>。<br>
-                5. 收集上清液，利用真空浓缩仪在 <b>4 ℃</b> 下蒸发至完全干燥（干品可在 -80 ℃ 长期保存）。<br>
-                6. 运行 LC-MS 分析前，使用 <b>100 μL 乙腈:水 (ACN:H2O, 1:1, v/v)</b> 重新溶解。<br>
-                7. 再次涡旋 30 秒，4 ℃ 超声 10 分钟，最后 <b>4 ℃、13000 rpm</b> 离心 <b>15 分钟</b>，移取上清液至进样瓶。<br><br>
-                <i>⚠️ <b>质控品配制提示 (Pooled QC)</b>：从每一个实际生物样品中分别吸取 5-10 μL 上清液，混合汇集到一个管中，即作为混合 QC 样本，用于平行的稳定性监测。</i>
-            </div>
-            """, unsafe_allowed_html=True)
+            **标准实验步骤：**
+            1. 向 **100 μL** 尿液中加入 **400 μL 纯甲醇 (MeOH)**。
+            2. 涡旋混匀 **30 秒**，然后在 **4 ℃** 水浴中超声 **10 分钟**。
+            3. 转移至 **-20 ℃** 冰箱中孵育 **1 小时** 以促进尿蛋白完全沉淀。
+            4. 在 **4 ℃** 下以 **13000 rpm** 速度高转速离心 **15 分钟**。
+            5. 收集上清液，利用真空浓缩仪在 **4 ℃** 下蒸发至完全干燥（干品可在 -80 ℃ 长期保存）。
+            6. 运行 LC-MS 分析前，使用 **100 μL 乙腈:水 (ACN:H2O, 1:1, v/v)** 重新溶解。
+            7. 再次涡旋 30 秒，4 ℃ 超声 10 分钟，最后 **4 ℃、13000 rpm** 离心 **15 分钟**，移取上清液至进样瓶。
+            
+            *⚠️ **质控品配制提示 (Pooled QC)**：从每一个实际生物样品中分别吸取 5-10 μL 上清液，混合汇集到一个管中，即作为混合 QC 样本，用于平行的稳定性监测。*
+            """)
 
     # --------------------------------------------------------------------------
     # 子模块 2：数据采集指南 (LC-MS)
     # --------------------------------------------------------------------------
     with sub_tab2:
-        st.markdown('<div class="section-title">📊 仪器配置：岛津 LC-MS 数据采集参数</div>', unsafe_allowed_html=True)
+        st.subheader("📊 仪器配置：岛津 LC-MS 数据采集参数")
         
         mode = st.radio("请选择液相色谱分离模式：", ["HILIC 模式 (亲水相互作用色谱)", "反相色谱模式 (RPLC)"], horizontal=True)
         
@@ -260,7 +247,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
         with col2:
             st.markdown("### ⚡ 质谱扫描参数 (DDA 模式)")
             st.markdown("""
-            *   **扫描模式**：MS1 SCAN ($m/z$ 60 ~ 1200) + MS2 DDA ($m/z$ 25 ~ 1200)
+            *   **扫描模式**：MS1 SCAN (m/z 60 ~ 1200) + MS2 DDA (m/z 25 ~ 1200)
             *   **源参数设置**：接口温度 300 ℃ / DL 温度 250 ℃ / 加热块 400 ℃
             *   **气体流量**：雾化气 3.0 L/min / 加热气 10 L/min / 干燥气 10 L/min
             """)
@@ -268,40 +255,34 @@ if main_module == "非靶向代谢组学 (Untargeted)":
         st.markdown("### ⏱️ 保留时间质控 (RTQC) 与日常进样批处理序列")
         st.markdown("""
         标准的日批处理序列排布推荐如下：
-        `Blank` $\rightarrow$ `QC` $\rightarrow$ `RTQC` $\rightarrow$ `Sample_001` $\rightarrow$ `Sample_002` $\rightarrow$ `...` $\rightarrow$ `QC`
+        Blank -> QC -> RTQC -> Sample_001 -> Sample_002 -> ... -> QC
         """)
 
     # --------------------------------------------------------------------------
     # 子模块 3：原始数据预处理 (Met4DX)
     # --------------------------------------------------------------------------
     with sub_tab3:
-        st.markdown('<div class="section-title">💻 数据处理：LabSolutions 转换与 Met4DX 提取</div>', unsafe_allowed_html=True)
+        st.subheader("💻 数据处理：LabSolutions 转换与 Met4DX 提取")
         
         st.markdown("""
-        <div class="step-card">
-            <b>1. 格式转换：</b> 在岛津 LabSolutions 软件中完成采集后，将原始数据（.lcd）一键导出并转换为国际标准质谱开放格式 <b>.mzML</b>。
-        </div>
-        <div class="step-card">
-            <b>2. Met4DX 工程配置：</b><br>
-            • 新建项目（New Project），指定对应的色谱柱类型、离子源模式以及高分辨质谱类型。<br>
-            • 将转换好的 mzML 文件按 <code>Sample</code>、<code>QC</code>、<code>Blank</code> 进行属性归类与分组指定。<br>
-            • 下发峰提取（Peak Picking）与对齐（Alignment）工作流任务。
-        </div>
-        <div class="step-card">
-            <b>3. 关键文件导出：</b> 处理完成后，必须从 Met4DX 软件中严格导出以下 <b>3 个核心标准文件</b>，用于接下来的 MetDNA 注释：
-            <ul>
-                <li><code>sample.info.csv</code> —— 包含完整的样本分组及属性映射信息表</li>
-                <li><code>data.csv</code> —— 包含精确质量数、保留时间及峰面积的 <b>MS1 峰表</b></li>
-                <li><code>spectra.msp</code> —— 包含二级碎片质谱信息的 <b>MS/MS 谱图文件</b></li>
-            </ul>
-        </div>
-        """, unsafe_allowed_html=True)
+        **1. 格式转换：** 在岛津 LabSolutions 软件中完成采集后，将原始数据（.lcd）一键导出并转换为国际标准质谱开放格式 **.mzML**。
+        
+        **2. Met4DX 工程配置：**
+        * 新建项目（New Project），指定对应的色谱柱类型、离子源模式以及高分辨质谱类型。
+        * 将转换好的 mzML 文件按 `Sample`、`QC`、`Blank` 进行属性归类与分组指定。
+        * 下发峰提取（Peak Picking）与对齐（Alignment）工作流任务。
+        
+        **3. 关键文件导出：** 处理完成后，必须从 Met4DX 软件中严格导出以下 **3 个核心标准文件**，用于接下来的 MetDNA 注释：
+        * `sample.info.csv` —— 包含完整的样本分组及属性映射信息表
+        * `data.csv` —— 包含精确质量数、保留时间及峰面积的 **MS1 峰表**
+        * `spectra.msp` —— 包含二级碎片质谱信息的 **MS/MS 谱图文件**
+        """)
 
     # --------------------------------------------------------------------------
     # 子模块 4：化合物智能注释 (MetDNA)
     # --------------------------------------------------------------------------
     with sub_tab4:
-        st.markdown('<div class="section-title">🌐 云端分析：MetDNA 代谢物自动化注释</div>', unsafe_allowed_html=True)
+        st.subheader("🌐 云端分析：MetDNA 代谢物自动化注释")
         st.markdown("""
         本模块指引如何对接朱正江课题组的 **MetDNA 线上自动化注释平台**（zhulab.cn）：
         
@@ -317,7 +298,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
 # 核心模块二：拟靶向代谢组学 (Quasi-targeted Metabolomics)
 # ==============================================================================
 elif main_module == "拟靶向代谢组学 (Quasi-targeted)":
-    st.markdown('<div class="main-title">🎯 拟靶向代谢组学高通量定量工作流</div>', unsafe_allowed_html=True)
+    st.header("🎯 拟靶向代谢组学高通量定量工作流")
     st.warning("📊 拟靶向模块目前处于高标准架构规划中。其底层设计将直接继承上方【非靶向模块】鉴定出的化合物保留时间库与离子对。")
     
     q_tab1, q_tab2, q_tab3 = st.tabs(["1️⃣ 拟靶向方法建立", "2️⃣ 靶向 MRM 数据采集", "3️⃣ 定量数据处理"])
@@ -349,7 +330,7 @@ elif main_module == "拟靶向代谢组学 (Quasi-targeted)":
 # 底部全局增强：大模型实时实验答疑助手
 # ==============================================================================
 st.divider()
-st.markdown('<div class="section-title">🤖 实验遇阻？代谢组学 AI 助手实时答疑</div>', unsafe_allowed_html=True)
+st.subheader("🤖 实验遇阻？代谢组学 AI 助手实时答疑")
 st.caption("实操过程中遇到任何异常（如离心后蛋白沉淀分层不明显、质谱响应异常、真空浓缩仪参数等），可直接在此处向大模型发起询问。")
 
 user_question = st.chat_input("✍️ 输入您在实验操作或仪器配置中遇到的技术问题（例如：细胞淬灭时错用了冷 PBS 会有什么影响？）")
