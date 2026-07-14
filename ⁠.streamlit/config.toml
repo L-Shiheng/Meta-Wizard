@@ -1,0 +1,10 @@
+[server]
+# 将文件上传上限修改为 1000MB (1GB)，满足代谢组学大文件处理需求
+maxUploadSize = 1000
+
+[theme]
+# 界面主题配置（可选）
+primaryColor = "#005A9C"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F4F6F9"
+textColor = "#262730"
