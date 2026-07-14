@@ -1,177 +1,366 @@
 import streamlit as st
-import pandas as pd
 
-# 1. 页面基本配置
+# ==============================================================================
+# 页面全局配置
+# ==============================================================================
 st.set_page_config(
-    page_title="岛津代谢组学一站式交互向导系统",
-    page_icon="🔬",
+    page_title="代谢组学一站式辅助系统",
+    page_icon="🧪",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# 2. 初始化全局状态（用于在不同步骤间传递数据）
-if "current_step" not in st.session_state:
-    st.session_state.current_step = 1
-if "project_name" not in st.session_state:
-    st.session_state.project_name = ""
-if "raw_files" not in st.session_state:
-    st.session_state.raw_files = []
-if "selected_ion_pairs" not in st.session_state:
-    st.session_state.selected_ion_pairs = None
+# ==============================================================================
+# 自定义 CSS 样式，美化界面
+# ==============================================================================
+st.markdown("""
+<style>
+    .main-title { font-size: 2.2rem; font-weight: 700; color: #1E3A8A; margin-bottom: 1rem; }
+    .section-title { font-size: 1.5rem; font-weight: 600; color: #2563EB; margin-top: 1.5rem; margin-bottom: 1rem; }
+    .step-card { background-color: #F8FAFC; padding: 1.2rem; border-left: 5px solid #3B82F6; border-radius: 4px; margin-bottom: 1rem; }
+    .highlight-text { color: #D97706; font-weight: 600; }
+</style>
+""", unsafe_allowed_html=True)
 
-# 3. 导航控制函数
-def next_step():
-    st.session_state.current_step += 1
+# ==============================================================================
+# 侧边栏导航控制中心
+# ==============================================================================
+st.sidebar.image("https://img.icons8.com/external-flatart-icons-flat-flatart-icons/128/external-laboratory-science-flatart-icons-flat-flatart-icons-1.png", width=80)
+st.sidebar.title("🔬 代谢组学中心")
+st.sidebar.markdown("基于岛津质谱及 MetDNA 平台的一站式工作流辅助系统")
 
-def prev_step():
-    st.session_state.current_step -= 1
+# 顶层两大核心模块切换
+main_module = st.sidebar.radio(
+    "请选择核心研究策略：",
+    ["非靶向代谢组学 (Untargeted)", "拟靶向代谢组学 (Quasi-targeted)"]
+)
 
-def go_to_step(step_num):
-    st.session_state.current_step = step_num
+st.sidebar.divider()
+st.sidebar.info("💡 **提示**：本系统已剔除 GC-MS/MS 相关内容，当前完全聚焦于基于液相色谱-质谱 (LC-MS) 的分析技术路线。")
 
-# 4. 侧边栏：流程进度指示器
-with st.sidebar:
-    st.title("🔬 工作流导航")
-    st.markdown("请按照以下步骤完成分析：")
+# ==============================================================================
+# 核心模块一：非靶向代谢组学 (Untargeted Metabolomics)
+# ==============================================================================
+if main_module == "非靶向代谢组学 (Untargeted)":
+    st.markdown('<div class="main-title">🎯 非靶向代谢组学一站式工作流</div>', unsafe_allowed_html=True)
     
-    steps = [
-        "1. 项目初始化 & 数据采集",
-        "2. 格式转换 (MSConvert/LabSolutions)",
-        "3. 非靶向注释 (Met4DX & MetDNA)",
-        "4. 拟靶向离子对挑选 (IonFinder)",
-        "5. RT校正 & MRM方法生成"
-    ]
+    # 建立实验流程的四大子选项卡
+    sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+        "1️⃣ 样品前处理 SOP", 
+        "2️⃣ 数据采集指南 (LC-MS)", 
+        "3️⃣ 原始数据预处理 (Met4DX)", 
+        "4️⃣ 化合物智能注释 (MetDNA)"
+    ])
     
-    for idx, step_name in enumerate(steps, 1):
-        # 突出显示当前正在进行的步骤
-        if st.session_state.current_step == idx:
-            st.markdown(f"**👉 {step_name}**")
-        else:
-            if st.button(f"{idx}. {step_name.split('. ')[1]}", key=f"nav_btn_{idx}"):
-                go_to_step(idx)
-                st.rerun()
-                
-    st.divider()
-    st.info("💡 提示：系统会自动检查路径中是否包含中文，避免后续 R 脚本报错。")
-
-# 5. 主界面内容区域
-st.title("岛津拟靶向/非靶向代谢组学一站式向导")
-st.caption("基于 Streamlit 构建的跨平台实验与数据分析闭环指导系统")
-st.divider()
-
-# --- 步骤 1：项目初始化 ---
-if st.session_state.current_step == 1:
-    st.header("Step 1: 项目初始化 & QTOF 数据采集")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.session_state.project_name = st.text_input("请输入项目名称 / 批次号：", st.session_state.project_name)
-        mode = st.radio("请选择分析模式：", ["非靶向组学 (Untargeted)", "拟靶向组学 (Pseudo-targeted)"])
-    with col2:
-        polarity = st.multiselect("选择电离模式（可多选）：", ["Positive", "Negative"], default=["Positive"])
-    
-    st.subheader("📋 QTOF 数据采集 SOP 确认")
-    st.warning("⚠️ 实验提醒：前处理过程请务必确保全程冰上操作！")
-    
-    # 这里可以展示仪器参数推荐配置
-    with st.expander("查看 9030/9050 QTOF 推荐液相梯度与质谱参数"):
-        st.text("流速: 0.3 mL/min | 柱温: 40 ℃\nMS1 扫描范围: 70-1000 m/z\nMS2 DDA 碰撞能: CE 25±15 V")
-    
-    st.divider()
-    if st.button("完成采集，进入下一步 ➡️", on_click=next_step):
-        st.rerun()
-
-# --- 步骤 2：格式转换 ---
-elif st.session_state.current_step == 2:
-    st.header("Step 2: 数据格式转换")
-    st.markdown("将岛津原生的 `.lcd` 数据转换为后续生信软件通用的格式。")
-    
-    st.subheader("1. 非靶向/拟靶向通路：转换成 .mzML")
-    st.info("操作指导：打开 LabSolutions 软件，选择[文件]—[导出]，选择 mzML 格式。")
-    
-    st.subheader("2. 拟靶向通路：提取二级数据转换成 .mgf")
-    st.markdown("可以通过下方组件，由系统在后台调用 `MSConvert` 命令行自动转换：")
-    
-    output_dir = st.text_input("输入本地数据存放的绝对路径（避免中文）：", "D:/Metabolomics_Data/")
-    
-    # 路径防错检查
-    if any(order in output_dir for order in ["稿", "文", "新", "中"]): # 简单示例，后续用正则精准匹配中文
-         st.error("❌ 检测到路径中包含中文字符！MRM ionfinder 无法在中文路径下运行，请修改为全英文路径。")
-         
-    st.divider()
-    col_nav1, col_nav2 = st.columns([1, 5])
-    with col_nav1:
-        st.button("⬅️ 上一步", on_click=prev_step)
-    with col_nav2:
-        st.button("进入下一步 ➡️", on_click=next_step)
-
-# --- 步骤 3：非靶向注释 ---
-elif st.session_state.current_step == 3:
-    st.header("Step 3: 非靶向注释 (Met4DX & MetDNA)")
-    st.markdown("在这里完成特征峰提取与基于大科学代谢物网络的化合物注释。")
-    
-    st.markdown("##### 1. 打开 Met4DX 处理 mzML 文件，导出 MS1 峰表（Peak Table）。")
-    st.markdown("##### 2. 登录 MetDNA 平台上传数据：")
-    st.info("需要准备三个文件：Sample Info (sample.info.csv)、MS1 Peak Table (data.csv)、MS/MS Data (spectra.msp)")
-    
-    st.subheader("📥 结果回验：上传 MetDNA 导出的鉴定表")
-    uploaded_metdna = st.file_uploader("将 MetDNA 导出的 identification.csv 拖拽至此处，系统将自动帮您筛选高置信度代谢物", type=["csv"])
-    
-    if uploaded_metdna:
-        df = pd.read_csv(uploaded_metdna)
-        st.success("文件解析成功！")
-        st.dataframe(df.head()) # 展示前几行
+    # --------------------------------------------------------------------------
+    # 子模块 1：样品前处理 SOP
+    # --------------------------------------------------------------------------
+    with sub_tab1:
+        st.markdown('<div class="section-title">🧪 实验第一步：标准化样品前处理</div>', unsafe_allowed_html=True)
         
-    st.divider()
-    col_nav1, col_nav2 = st.columns([1, 5])
-    with col_nav1:
-        st.button("⬅️ 上一步", on_click=prev_step)
-    with col_nav2:
-        st.button("进入下一步 ➡️", on_click=next_step)
+        # 交互选择基质与分析目标
+        col1, col2 = st.columns(2)
+        with col1:
+            matrix = st.selectbox("请选择生物基质类型：", ["血清/血浆 (Serum/Plasma)", "动物组织 (Tissue)", "细胞 (Cells)", "尿液 (Urine)"])
+        with col2:
+            if matrix == "尿液 (Urine)":
+                omic_type = st.radio("请选择分析目标：", ["极性代谢物 (Polar Metabolites)"], horizontal=True)
+            else:
+                omic_type = st.radio("请选择分析目标：", ["极性代谢物 (Polar Metabolites)", "脂质组学 (Lipidomics)"], horizontal=True)
+        
+        st.markdown("---")
+        
+        # --- 血清/血浆前处理 ---
+        if matrix == "血清/血浆 (Serum/Plasma)":
+            if omic_type == "极性代谢物 (Polar Metabolites)":
+                st.caption("🎯 当前方法来源：Zhu Lab 标准甲醇/乙腈沉淀法 (zhulab.cn)")
+                step_a, step_b, step_c = st.tabs(["1. 萃取与沉淀", "2. 离心与干燥", "3. 复溶上机"])
+                with step_a:
+                    st.markdown("""
+                    1. 向 **100 μL** 血浆/血清中加入 **400 μL 甲醇/乙腈（体积比 1:1）**（如果适用，可在此步加入同位素内标进行提取）。
+                    2. 涡旋 **30 秒**，然后在 **4 ℃** 的水浴中超声 **10 分钟**。
+                    3. 转移至 **-20 ℃** 冰箱中孵育 **1 小时**，以促进蛋白质完全沉淀。
+                    """)
+                with step_b:
+                    st.markdown("""
+                    1. 在 **4 ℃** 下以 **13000 rpm** 的速度高转速离心 **15 分钟**。
+                    2. 小心吸取全部上清液，使用真空浓缩仪在 **4 ℃** 下蒸发至完全干燥。
+                    3. *[长效保存]* 如果不立即分析，干燥后的样品可在 **-80 ℃** 下长期保存。
+                    """)
+                with step_c:
+                    st.markdown("""
+                    1. 在进行液相色谱-质谱 (LC-MS) 分析之前，加入 **100 μL 乙腈:水（体积比 1:1）** 重新溶解干燥后的样品。
+                    2. 涡旋 **30 秒**，在 **4 ℃** 的水浴中超声 **10 分钟** 促溶。
+                    3. 在 **4 ℃** 下以 **13000 rpm** 的速度再次离心 **15 分钟** 以沉淀可能残余的微量蛋白。
+                    4. 将上清液转移到带内衬管的液相色谱样品瓶中，并在 **4 ℃** 下暂存用于上机。
+                    """)
+                    
+            elif omic_type == "脂质组学 (Lipidomics)":
+                st.caption("🎯 当前方法来源：Zhu Lab 脂质组学 MTBE 提取法 (zhulab.cn)")
+                step_a, step_b, step_c = st.tabs(["1. MTBE 萃取 (重复3次)", "2. 浓缩干燥", "3. 复溶上机"])
+                with step_a:
+                    st.markdown("""
+                    1. 取 **60 μL** 血浆/血清，加入 **340 μL H2O** 以及 **960 μL MTBE/MeOH (5:1; v/v)** 混合液。
+                    2. 涡旋 **60 秒**，在 **4 ℃** 水浴中超声 **10 分钟**。
+                    3. 在 **4 ℃** 下以 **3000 rpm** 离心 **15 分钟**。
+                    4. 小心吸取上层清液（**500 μL**）至新管。
+                    5. 向原管剩余溶液中补加 **500 μL MTBE** 进行再次提取，该重萃取步骤总共重复 **3 次**。
+                    """)
+                with step_b:
+                    st.markdown("""
+                    1. 合并 3 次收集的所有上清液（总体积约 **1.5 mL**）。
+                    2. 使用真空浓缩仪在 **4 ℃** 下蒸发至干燥。
+                    """)
+                with step_c:
+                    st.markdown("""
+                    1. 加入 **100 μL DCM/MeOH (1:1; v/v)**（二氯甲烷/甲醇）溶液进行复溶。
+                    2. 转移至进样瓶，准备进行非靶向脂质组学质谱分析。
+                    """)
 
-# --- 步骤 4：拟靶向离子对挑选 ---
-elif st.session_state.current_step == 4:
-    st.header("Step 4: 拟靶向离子对挑选 (MRM ionfinder)")
-    st.markdown("利用 MS1 峰表和封装好的 MS2（.mgf）数据，挑选最强的特征碎片离子对。")
-    
-    st.subheader("⚙️ 运行参数配置")
-    ion_mode = st.selectbox("选择分析的离子模式：", ["正离子 (POS)", "负离子 (NEG)"])
-    rt_tolerance = st.slider("保留时间匹配窗口 (RT Tolerance / min):", 0.1, 1.0, 0.5, step=0.05)
-    
-    if st.button("⚡ 启动 MRM ionfinder 算法进行挑选"):
-        with st.spinner("后台正在运行 R 脚本挑选最佳子离子，请稍候..."):
-            # 后续在这里放入后台调用的 Python 代码
-            st.success("🎉 离子对挑选完成！已自动剔除基线噪音及假阳性信号。")
+        # --- 动物组织前处理 ---
+        elif matrix == "动物组织 (Tissue)":
+            if omic_type == "极性代谢物 (Polar Metabolites)":
+                st.caption("🎯 当前方法来源：Zhu Lab 组织水匀浆沉淀法 (zhulab.cn)")
+                step_a, step_b, step_c = st.tabs(["1. 匀浆与萃取", "2. 离心与干燥", "3. 复溶上机"])
+                with step_a:
+                    st.markdown("""
+                    1. 称取 **20 mg** 组织，加入 **200 μL 水**，在低温环境下将组织完全匀浆。
+                    2. 向这 **200 μL** 组织匀浆液中加入 **800 μL 甲醇:乙腈（体积比 1:1）**（如果适用，加入内标）。
+                    3. 涡旋 **30 秒**，在 **4 ℃** 水浴中超声 **10 分钟**。
+                    4. 在 **-20 ℃** 下孵育 **1 小时** 以促进蛋白质完全沉淀。
+                    """)
+                with step_b:
+                    st.markdown("""
+                    1. 在 **4 ℃** 下以 **13000 rpm** 离心 **15 分钟**。
+                    2. 取上清液，使用真空浓缩仪在 **4 ℃** 下蒸发至干燥（干燥后可置于 -80 ℃ 保存）。
+                    """)
+                with step_c:
+                    st.markdown("""
+                    1. 用 **100 μL 乙腈:水（1:1）** 重新溶解干燥后的样品。
+                    2. 涡旋 **30 秒**，在 **4 ℃** 水浴中超声 **10 分钟**，接着在 **4 ℃** 下以 **13000 rpm** 离心 **15 分钟**。
+                    3. 取上清液转移至色谱小瓶中用于 LC-MS 分析。
+                    """)
+                    
+            elif omic_type == "脂质组学 (Lipidomics)":
+                st.caption("🎯 当前方法来源：Zhu Lab 组织匀浆 MTBE 提取法 (zhulab.cn)")
+                step_a, step_b, step_c = st.tabs(["1. 匀浆与蛋白定量", "2. MTBE 萃取", "3. 干燥与复溶"])
+                with step_a:
+                    st.markdown("""
+                    1. 称重组织并在 H2O 中匀浆（比例固定为 **10 mg 组织对应 200 μL H2O**），进行 3 个循环（每循环：5500 rpm 运转 20 秒，重复 3 次）。
+                    2. 在 **4 ℃**、**13000 rpm** 下离心 **15 分钟**。
+                    3. 取 **10 μL** 上清液，用水稀释 10-20 倍，使用 BCA 试剂盒测定蛋白质浓度，用于后续数据归一化。
+                    """)
+                with step_b:
+                    st.markdown("""
+                    1. 取 **20 μL** 组织匀浆液，补加 **380 μL H2O**，再加入 **960 μL MTBE/MeOH (5:1; v/v)**。
+                    2. 涡旋 **60 秒**，**4 ℃** 超声 **10 分钟**。
+                    3. 在 **4 ℃**、**3000 rpm** 下离心 **15 分钟**，取上层清液（**500 μL**）。
+                    4. 向原管剩余溶液中加 **500 μL MTBE** 再次提取。总共重复提取 **3 次**。
+                    """)
+                with step_c:
+                    st.markdown("""
+                    1. 合并三次抽提的上清液（约 **1.5 mL**），使用真空浓缩仪在 **4 ℃** 下蒸干。
+                    2. 用 **100 μL DCM/MeOH (1:1; v/v)** 复溶，转移至进样瓶中上机。
+                    """)
+
+        # --- 细胞前处理 ---
+        elif matrix == "细胞 (Cells)":
+            st.caption("🎯 当前方法来源：Zhu Lab 细胞快速淬灭法 (Fast-quench method)")
+            cell_method = st.selectbox("请指定细胞培养类型：", ["悬浮细胞极性代谢物提取", "贴壁细胞极性代谢物提取", "细胞沉淀脂质组学提取"])
             
-    st.divider()
-    col_nav1, col_nav2 = st.columns([1, 5])
-    with col_nav1:
-        st.button("⬅️ 上一步", on_click=prev_step)
-    with col_nav2:
-        st.button("进入下一步 ➡️", on_click=next_step)
+            if "极性代谢物" in cell_method:
+                st.info("🧪 提取液配制：乙腈/甲醇/水 (2/2/1, v/v/v)，使用前需置于 -80 ℃ 预冷 1 小时（确保无冰块结晶）。")
+                step_a, step_b, step_c = st.tabs(["1. 淬灭与收集", "2. 细胞内容物萃取", "3. 蛋白定量与复溶"])
+                with step_a:
+                    if "悬浮细胞" in cell_method:
+                        st.markdown("""
+                        1. 细胞长至目标密度后（约 ~2×10⁶ 细胞/皿），**800 rpm** 离心 **5 分钟**，完全吸除上清培养基。
+                        2. 用 **1 mL 温 PBS** 快速洗涤 1 次，**800 rpm** 再次离心 **5 分钟**，完全吸除 PBS。
+                        3. 将含有细胞沉淀的离心管迅速放置在干冰上，加入 **1000 μL** 预冷的提取液。
+                        4. 放置在 **-80 ℃** 下孵育至少 **40 分钟**。
+                        """)
+                    else:
+                        st.markdown("""
+                        1. 贴壁细胞达到目标密度后，完全吸除培养基；用 **1 mL 温 PBS** 快速洗涤细胞（控制在 10 秒内）*[注意：切勿使用冰冷 PBS]*。
+                        2. 立即将培养皿放在干冰上，加入 **1000 μL** 预冷的提取液，在 **-80 ℃** 下孵育至少 **40 分钟**。
+                        3. 使用细胞刮刀刮取培养皿内的全部内容物，转移至 2 mL EP 管中。
+                        """)
+                with step_b:
+                    st.markdown("""
+                    1. 再次向原管/原培养皿中补加 **500 μL** 提取液洗涤残余，合并至上一步的管中（提取液总体积 **1.5 mL**）。
+                    2. 在 **4–8 ℃** 环境下高频涡旋 **1 分钟**。
+                    3. 在 **4 ℃**、**13500 rpm** 下高转速离心 **15 分钟** 以彻底沉淀不溶性蛋白质，收集上清。
+                    4. 将上清液使用真空浓缩仪在 **4 ℃** 下蒸发至干燥，-80 ℃ 保存。
+                    """)
+                with step_c:
+                    st.markdown("""
+                    1. **蛋白归一化 (Normalization)**：使用 **200 μL** 裂解液（100 mM Tris-HCl, 4% SDS, pH 7.6）重悬第二步剩下来的蛋白沉淀。涡旋并超声至溶解，用 BCA 试剂盒测定蛋白浓度。
+                    2. **复溶上机**：向*蛋白质浓度最低*的那个样品中加入 **100 μL 乙腈/水 (1/1, v/v)**。
+                    3. 其余样品根据与最低浓度的比例关系，计算并加入**对应更大体积**的乙腈/水 (1/1, v/v)，使所有样品的最终相对浓度完全均等。
+                    4. 涡旋 30 秒，4 ℃ 水浴超声 10 分钟，最后 **4 ℃、13000 rpm** 离心 **15 分钟**，取上清上机。
+                    """)
+            else:
+                step_a, step_b = st.tabs(["1. 冻融裂解与定量", "2. MTBE 脂质萃取与干燥"])
+                with step_a:
+                    st.markdown("""
+                    1. 取约 $5 \\times 10^6$ 个细胞沉淀与 **400 μL 水** 混合。
+                    2. 涡旋 30 秒，投入液氮中快速孵育 **1 分钟**。随后取出在室温下解冻，并在 4 ℃ 水浴超声 **10 分钟**。重复该“液氮冻融-超声”循环共 **3 次**。
+                    3. **4 ℃、13000 rpm** 离心 **15 分钟**。取 **10 μL** 上清液使用 BCA 试剂盒测定蛋白质浓度。
+                    """)
+                with step_b:
+                    st.markdown("""
+                    1. 向管中加入 **960 μL MTBE/MeOH (5:1; v/v)**。
+                    2. 涡旋 60 秒，**4 ℃** 超声 10 分钟，**4 ℃、3000 rpm** 离心 **15 分钟**，小心收取上层清液（**500 μL**）。
+                    3. 向剩余底液中补加 **500 μL MTBE** 再次萃取，总共提取 **3 次**。合并上清液。
+                    4. 真空浓缩仪在 **4 ℃** 下蒸发至完全干燥。
+                    5. 临上机前用 **100 μL DCM/MeOH (1:1; v/v)** 复溶。
+                    """)
 
-# --- 步骤 5：RT 校正与方法文件生成 ---
-elif st.session_state.current_step == 5:
-    st.header("Step 5: 保留时间校正 & LabSolutions 方法生成")
-    st.markdown("基于标准品（RTQC）校正保留时间飘移，并一键生成最终的 MRM 方法。")
-    
-    st.subheader("1. 输入当前批次内标（RTQC）的实际出峰时间")
-    
-    # 动态创建一个表格让用户填入实际 RT
-    rt_data = {
-        "标准品名称": ["L-Norleucine", "Kynurenic acid", "Flavone"],
-        "文献参考 RT (min)": [1.07, 4.44, 6.80],
-        "本批次实际 RT (min)": [1.07, 4.44, 6.80] # 允许用户在界面上修改
-    }
-    df_rt = pd.DataFrame(rt_data)
-    edited_df = st.data_editor(df_rt, num_rows="fixed")
-    
-    st.subheader("2. 一键导出岛津化合物表")
-    if st.button("生成最终方法化合物表 (.txt)"):
-        # 后续在这里放入根据修正后的 RT 更新方法模板文件的逻辑
-        st.success("生成成功！该文本文件可直接在 LabSolutions 软件的 [MRM方法数据表] 中通过右键[导入]一键加载。")
-        st.download_button("💾 下载化合物表方法文件", data="化合物表文本内容占位符", file_name="Shimadzu_MRM_Method.txt")
+        # --- 尿液前处理 ---
+        elif matrix == "尿液 (Urine)":
+            st.caption("🎯 当前方法来源：Zhu Lab 尿液极性代谢物甲醇沉淀法 (zhulab.cn)")
+            st.markdown("""
+            <div class="step-card">
+                <b>标准实验步骤：</b><br>
+                1. 向 <b>100 μL</b> 尿液中加入 <b>400 μL 纯甲醇 (MeOH)</b>。<br>
+                2. 涡旋混匀 <b>30 秒</b>，然后在 <b>4 ℃</b> 水浴中超声 <b>10 分钟</b>。<br>
+                3. 转移至 <b>-20 ℃</b> 冰箱中孵育 <b>1 小时</b> 以促进尿蛋白完全沉淀。<br>
+                4. 在 <b>4 ℃</b> 下以 <b>13000 rpm</b> 速度高转速离心 <b>15 分钟</b>。<br>
+                5. 收集上清液，利用真空浓缩仪在 <b>4 ℃</b> 下蒸发至完全干燥（干品可在 -80 ℃ 长期保存）。<br>
+                6. 运行 LC-MS 分析前，使用 <b>100 μL 乙腈:水 (ACN:H2O, 1:1, v/v)</b> 重新溶解。<br>
+                7. 再次涡旋 30 秒，4 ℃ 超声 10 分钟，最后 <b>4 ℃、13000 rpm</b> 离心 <b>15 分钟</b>，移取上清液至进样瓶。<br><br>
+                <i>⚠️ <b>质控品配制提示 (Pooled QC)</b>：从每一个实际生物样品中分别吸取 5-10 μL 上清液，混合汇集到一个管中，即作为混合 QC 样本，用于平行的稳定性监测。</i>
+            </div>
+            """, unsafe_allowed_html=True)
 
-    st.divider()
-    if st.button("⬅️ 返回首步", on_click=go_to_step, args=(1,)):
-        st.rerun()
+    # --------------------------------------------------------------------------
+    # 子模块 2：数据采集指南 (LC-MS)
+    # --------------------------------------------------------------------------
+    with sub_tab2:
+        st.markdown('<div class="section-title">📊 仪器配置：岛津 LC-MS 数据采集参数</div>', unsafe_allowed_html=True)
+        
+        mode = st.radio("请选择液相色谱分离模式：", ["HILIC 模式 (亲水相互作用色谱)", "反相色谱模式 (RPLC)"], horizontal=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("### 🧪 液相流动相配制标准")
+            if "HILIC" in mode:
+                st.code("""
+色谱柱: Waters BEH Amide
+流动相 A: 水 + 25 mM 乙酸铵 + 25 mM 氨水
+流动相 B: 100% 乙腈
+                """, language="text")
+            else:
+                st.code("""
+色谱柱: Phenomenex Kinetex C18
+流动相 A: 水 + 0.1% 甲酸
+流动相 B: 100% 乙腈 + 0.1% 甲酸
+                """, language="text")
+        
+        with col2:
+            st.markdown("### ⚡ 质谱扫描参数 (DDA 模式)")
+            st.markdown("""
+            *   **扫描模式**：MS1 SCAN ($m/z$ 60 ~ 1200) + MS2 DDA ($m/z$ 25 ~ 1200)
+            *   **源参数设置**：接口温度 300 ℃ / DL 温度 250 ℃ / 加热块 400 ℃
+            *   **气体流量**：雾化气 3.0 L/min / 加热气 10 L/min / 干燥气 10 L/min
+            """)
+            
+        st.markdown("### ⏱️ 保留时间质控 (RTQC) 与日常进样批处理序列")
+        st.markdown("""
+        标准的日批处理序列排布推荐如下：
+        `Blank` $\rightarrow$ `QC` $\rightarrow$ `RTQC` $\rightarrow$ `Sample_001` $\rightarrow$ `Sample_002` $\rightarrow$ `...` $\rightarrow$ `QC`
+        """)
+
+    # --------------------------------------------------------------------------
+    # 子模块 3：原始数据预处理 (Met4DX)
+    # --------------------------------------------------------------------------
+    with sub_tab3:
+        st.markdown('<div class="section-title">💻 数据处理：LabSolutions 转换与 Met4DX 提取</div>', unsafe_allowed_html=True)
+        
+        st.markdown("""
+        <div class="step-card">
+            <b>1. 格式转换：</b> 在岛津 LabSolutions 软件中完成采集后，将原始数据（.lcd）一键导出并转换为国际标准质谱开放格式 <b>.mzML</b>。
+        </div>
+        <div class="step-card">
+            <b>2. Met4DX 工程配置：</b><br>
+            • 新建项目（New Project），指定对应的色谱柱类型、离子源模式以及高分辨质谱类型。<br>
+            • 将转换好的 mzML 文件按 <code>Sample</code>、<code>QC</code>、<code>Blank</code> 进行属性归类与分组指定。<br>
+            • 下发峰提取（Peak Picking）与对齐（Alignment）工作流任务。
+        </div>
+        <div class="step-card">
+            <b>3. 关键文件导出：</b> 处理完成后，必须从 Met4DX 软件中严格导出以下 <b>3 个核心标准文件</b>，用于接下来的 MetDNA 注释：
+            <ul>
+                <li><code>sample.info.csv</code> —— 包含完整的样本分组及属性映射信息表</li>
+                <li><code>data.csv</code> —— 包含精确质量数、保留时间及峰面积的 <b>MS1 峰表</b></li>
+                <li><code>spectra.msp</code> —— 包含二级碎片质谱信息的 <b>MS/MS 谱图文件</b></li>
+            </ul>
+        </div>
+        """, unsafe_allowed_html=True)
+
+    # --------------------------------------------------------------------------
+    # 子模块 4：化合物智能注释 (MetDNA)
+    # --------------------------------------------------------------------------
+    with sub_tab4:
+        st.markdown('<div class="section-title">🌐 云端分析：MetDNA 代谢物自动化注释</div>', unsafe_allowed_html=True)
+        st.markdown("""
+        本模块指引如何对接朱正江课题组的 **MetDNA 线上自动化注释平台**（zhulab.cn）：
+        
+        1.  **平台登录与新建项目**：登录平台，创建一个新的非靶向代谢组学分析任务。
+        2.  **核心数据上传**：将上一步从 Met4DX 导出的 `sample.info.csv`、`data.csv` 和 `spectra.msp` 三个文件拖拽上传。
+        3.  **算法参数确认**：
+            *   指定匹配的质量容差（通常 MS1 为 15 ppm，MS2 为 20 ppm）。
+            *   选择对应的衍生加合离子库（Adducts List）。
+        4.  **运行与报告查看**：提交任务。系统将通过基于代谢反应网络的递进注释算法自动下发识别。任务完成后即可在线浏览或下载完整的化合物鉴定结果（Analysis Report）。
+        """)
+
+# ==============================================================================
+# 核心模块二：拟靶向代谢组学 (Quasi-targeted Metabolomics)
+# ==============================================================================
+elif main_module == "拟靶向代谢组学 (Quasi-targeted)":
+    st.markdown('<div class="main-title">🎯 拟靶向代谢组学高通量定量工作流</div>', unsafe_allowed_html=True)
+    st.warning("📊 拟靶向模块目前处于高标准架构规划中。其底层设计将直接继承上方【非靶向模块】鉴定出的化合物保留时间库与离子对。")
+    
+    q_tab1, q_tab2, q_tab3 = st.tabs(["1️⃣ 拟靶向方法建立", "2️⃣ 靶向 MRM 数据采集", "3️⃣ 定量数据处理"])
+    
+    with q_tab1:
+        st.markdown("### 🛠️ 离子对 (Transitions) 自动下发生成")
+        st.markdown("""
+        *   **离子对提取**：直接导入非靶向模块获得的化合物高分辨率 MS1/MS2 数据，自动锁定母离子/子离子对（Q1/Q3）。
+        *   **碰撞能 (CE) 优化**：匹配算法推荐的最优碰撞能数值。
+        *   **保留时间窗口调度 (Scheduled MRM)**：利用非靶向实测的保留时间建立动态监测窗口（RT Window），大幅释放质谱驻留时间，支持在单次进样中并行分析数百个靶向代谢物。
+        """)
+        
+    with q_tab2:
+        st.markdown("### ⚡ 三重四极杆/Q-TOF 仪器方法配置")
+        st.markdown("""
+        *   **色谱条件继承**：通常完全继承非靶向的流动相体系与色谱柱条件（Waters Amide 或 Kinetex C18），以确保保留时间的绝对漂移最小化。
+        *   **MRM/PRM 采集**：将 Scheduled MRM 离子对列表下发至岛津三重四极杆质谱（如 LCMS-8060 等机型）建立采集方法。
+        """)
+        
+    with q_tab3:
+        st.markdown("### 📈 峰积分、归一化与多变量统计")
+        st.markdown("""
+        *   **色谱峰提取与积分**：对目标 MRM 通道的特征提取离子色谱峰（XIC）进行自动积分。
+        *   **内标校正 (Normalisation)**：利用样品中添加的同位素内标响应值，对基质效应和仪器响应漂移进行校准。
+        *   **定量矩阵导出**：一键导出化合物相对/绝对定量峰面积矩阵，直接对接 PCA、OPLS-DA 等高级多元统计分析。
+        """)
+
+# ==============================================================================
+# 底部全局增强：大模型实时实验答疑助手
+# ==============================================================================
+st.divider()
+st.markdown('<div class="section-title">🤖 实验遇阻？代谢组学 AI 助手实时答疑</div>', unsafe_allowed_html=True)
+st.caption("实操过程中遇到任何异常（如离心后蛋白沉淀分层不明显、质谱响应异常、真空浓缩仪参数等），可直接在此处向大模型发起询问。")
+
+user_question = st.chat_input("✍️ 输入您在实验操作或仪器配置中遇到的技术问题（例如：细胞淬灭时错用了冷 PBS 会有什么影响？）")
+
+if user_question:
+    with st.chat_message("user"):
+        st.write(user_question)
+    with st.chat_message("assistant"):
+        st.markdown("""
+        💡 **大模型实时解析提示**：
+        
+        收到您的实验异常反馈。在实际操作中，如果您在前处理、岛津仪器数据采集或者 Met4DX 峰提取时遇到异常，我将会结合系统内置的标准化方法库，为您给出专业的排查建议。
+        *(此处已在系统底层预留了与大模型核心的安全交互接口)*
+        """)
