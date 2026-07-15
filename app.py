@@ -20,7 +20,7 @@ st.sidebar.markdown("一站式液相色谱-质谱工作流")
 # 顶层两大核心模块切换
 main_module = st.sidebar.radio(
     "请选择核心研究策略：",
-    ["非靶向代谢组学 (Untargeted)", "拟靶向代谢组学 (Quasi-targeted)"]
+    ["非靶向代谢组学 (Untargeted)", "拟靶向代谢组学 (Pseudo-targeted)"]
 )
 
 st.sidebar.divider()
