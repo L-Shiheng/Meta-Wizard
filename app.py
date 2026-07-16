@@ -1,31 +1,31 @@
 import streamlit as st
 import base64
+import io
 
 # ==============================================================================
-# PDF 渲染功能函数 (优化了浏览器拦截问题，增加备用下载)
+# PDF 动态分页渲染函数 (基于 PyMuPDF)
 # ==============================================================================
-def show_pdf(file_path):
+try:
+    import fitz  # PyMuPDF
+    from PIL import Image
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
+@st.cache_data(show_spinner=False)
+def render_pdf_page(file_path, page_num):
+    """提取 PDF 的指定页并渲染为图片"""
     try:
-        # 提供一个原生的下载按钮作为备用保险
-        with open(file_path, "rb") as f:
-            pdf_bytes = f.read()
-            st.download_button(
-                label="📥 点击下载/打开原版 PDF 手册（若下方预览被浏览器拦截）",
-                data=pdf_bytes,
-                file_name="非靶向代谢组学MetDNA化合物注释操作流程.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-        
-        # 使用 <embed> 标签代替 <iframe>，降低被浏览器拦截的概率
-        base64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
-        pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="750" type="application/pdf">'
-        st.markdown(pdf_display, unsafe_allow_html=True)
-        
-    except FileNotFoundError:
-        st.warning(f"⚠️ 提示：系统未能找到文件 `{file_path}`。请确保该 PDF 文件已与 app.py 放置在同一目录下。")
+        doc = fitz.open(file_path)
+        # 确保页码不超限
+        page_index = min(page_num, len(doc) - 1)
+        page = doc.load_page(page_index)
+        # dpi=150 保证页面清晰度同时兼顾加载速度
+        pix = page.get_pixmap(dpi=150)
+        img_data = pix.tobytes("png")
+        return Image.open(io.BytesIO(img_data))
     except Exception as e:
-        st.error(f"加载 PDF 时出现未知错误: {e}")
+        return None
 
 # ==============================================================================
 # 页面全局配置
@@ -403,55 +403,96 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     st.markdown("""📌 **怎么做**：再次 14000 g 离心 10 分钟。取上清上机（注：需配合肌酐测定进行后期校正）。""")
 
     # --------------------------------------------------------------------------
-    # 子模块 2：数据采集指南 (LC-MS) 配合在线 PDF 手册查阅
+    # 子模块 2：数据采集指南 (LC-MS) - 动态联动版
     # --------------------------------------------------------------------------
     with sub_tab2:
-        st.subheader("📊 仪器配置：LC-MS 数据采集参数与操作指引")
-        st.info("💡 左侧为核心采集参数，右侧为完整的操作手册。您可以直接对照设定，避免来回翻页。")
+        st.subheader("📊 仪器配置：参数与操作手册动态联动")
         
-        # 左右并排布局：左侧参数，右侧 PDF
-        col_param, col_pdf = st.columns([1, 1.2]) 
-        
-        with col_param:
-            mode = st.radio("色谱分离模式：", ["HILIC 模式", "反相色谱模式 (RPLC)"], horizontal=True)
+        if not PDF_SUPPORT:
+            st.error("⚠️ 运行环境缺少 PDF 动态渲染依赖！请在仓库的 requirements.txt 中添加 PyMuPDF 和 Pillow。")
+        else:
+            col_param, col_pdf = st.columns([1, 1.2]) 
             
-            st.markdown("### 🧪 流动相与色谱柱")
-            if "HILIC" in mode:
-                st.code("""
+            with col_param:
+                st.info("🎯 **操作导航**：请依次点击下方步骤，右侧手册将自动同步至对应页面。")
+                
+                step_selection = st.radio(
+                    "请选择当前操作进度：",
+                    [
+                        "第一步：质谱方法 (MS Method) 建立",
+                        "第二步：液相方法 (LC Method) 建立",
+                        "第三步：进样批处理 (Batch Table) 排布",
+                        "第四步：Met4DX 原始数据提取"
+                    ]
+                )
+                
+                st.markdown("---")
+                st.markdown("### 📝 核心参数核对")
+                
+                # 注意：这里的 0, 1, 2, 3 代表 PDF 的第 1, 2, 3, 4 页。
+                # 部署后如果发现截图页码不对，请直接修改下面这个 pdf_target_page 的数字即可。
+                if step_selection == "第一步：质谱方法 (MS Method) 建立":
+                    pdf_target_page = 0  
+                    st.success("当前模式：**DDA 扫描模式**")
+                    st.markdown("""
+                    * **扫描范围**: MS1 (m/z 60~1200), MS2 (m/z 25~1200)
+                    * **接口温度**: 300 ℃
+                    * **DL 温度**: 250 ℃
+                    * **加热块温度**: 400 ℃
+                    * **雾化气流量**: 3.0 L/min
+                    * **加热气/干燥气**: 10.0 L/min
+                    """)
+                    st.caption("👉 详情请参考右侧手册关于质谱源参数设定的截图。")
+                    
+                elif step_selection == "第二步：液相方法 (LC Method) 建立":
+                    pdf_target_page = 1  
+                    mode = st.selectbox("当前色谱模式：", ["HILIC (极性)", "RPLC (非极性)"])
+                    if mode == "HILIC (极性)":
+                        st.code("""
 色谱柱: Waters BEH Amide (2.1x100mm, 1.7μm)
 流动相 A: 水 + 25 mM 乙酸铵 + 25 mM 氨水
 流动相 B: 100% 乙腈
 流速: 0.5 mL/min
-                """, language="text")
-            else:
-                st.code("""
+                        """, language="text")
+                    else:
+                        st.code("""
 色谱柱: Phenomenex Kinetex C18 (2.1x100mm, 2.6μm)
 流动相 A: 100% 水 + 0.01% 乙酸
 流动相 B: IPA:ACN (1:1)
 流速: 0.3 mL/min
-                """, language="text")
+                        """, language="text")
+                    st.caption("👉 右侧已为您翻至液相梯度与柱温箱设定页。")
+                    
+                elif step_selection == "第三步：进样批处理 (Batch Table) 排布":
+                    pdf_target_page = 2  
+                    st.warning("⚠️ **进样前防呆核对**：")
+                    st.checkbox("流动相与清洗液体积是否充足？")
+                    st.checkbox("仪器真空度与温度是否达标？")
+                    st.markdown("**标准序列结构**：")
+                    st.code("Blank ➔ QC ➔ RTQC ➔ Sample_01~10 ➔ Blank ➔ QC", language="text")
+                    st.caption("👉 右侧手册展示了 Batch 表格的规范填写示例。")
+                    
+                else:
+                    pdf_target_page = 3  
+                    st.info("数据采集完毕后，需进行格式转换与特征提取。")
+                    st.markdown("""
+                    1. 将 `.lcd` 转换为 `.mzML` 格式。
+                    2. 导入 Met4DX，按 `Sample`, `QC`, `Blank` 分组。
+                    3. 执行 Peak Picking 与 Alignment。
+                    4. 导出 `sample.info.csv`, `data.csv`, `spectra.msp`。
+                    """)
+                    st.caption("👉 右侧已同步至软件数据处理界面截图。")
+
+            with col_pdf:
+                # 动态加载对应页码的图片
+                pdf_file_name = "非靶向代谢组学MetDNA化合物注释操作流程.pdf"
+                st.markdown(f"### 📖 原版操作手册 (实时预览 第 {pdf_target_page + 1} 页)")
+                page_image = render_pdf_page(pdf_file_name, pdf_target_page)
                 
-            st.markdown("### ⚡ 质谱源参数 (DDA 模式)")
-            st.markdown("""
-            * **扫描模式**: MS1 SCAN (m/z 60~1200) + MS2 DDA (m/z 25~1200)
-            * **接口温度**: 300 ℃
-            * **DL 温度**: 250 ℃
-            * **加热块温度**: 400 ℃
-            * **雾化气流量**: 3.0 L/min
-            * **加热气流量**: 10.0 L/min
-            * **干燥气流量**: 10.0 L/min
-            """)
-            
-            st.markdown("### ⏱️ 进样批处理序列排布 (Batch)")
-            st.markdown("""
-            请严格按照以下顺序建立样品列表：
-            `Blank` ➔ `QC` ➔ `RTQC` ➔ `Sample_01~10` ➔ `Blank` ➔ `QC`
-            """)
-
-        with col_pdf:
-            st.markdown("### 📖 原版操作手册在线查阅")
-            show_pdf("非靶向代谢组学MetDNA化合物注释操作流程.pdf")
-
+                if page_image:
+                    st.image(page_image, use_container_width=True)
+                else:
+                    st.error(f"无法渲染 PDF，请确认 `{pdf_file_name}` 是否已随代码一起上传到了代码仓库的根目录。")
 
     # --------------------------------------------------------------------------
     # 子模块 3：原始数据预处理 (Met4DX)
