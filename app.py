@@ -1,4 +1,20 @@
 import streamlit as st
+import base64
+
+# ==============================================================================
+# PDF 渲染功能函数
+# ==============================================================================
+def show_pdf(file_path):
+    try:
+        with open(file_path, "rb") as f:
+            base64_pdf = base64.b64encode(f.read()).decode('utf-8')
+        # 嵌入 PDF 的 HTML iframe 标签
+        pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+        st.markdown(pdf_display, unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.warning(f"⚠️ 提示：系统未能找到文件 `{file_path}`。请确保该 PDF 文件已与 app.py 放置在同一目录下。")
+    except Exception as e:
+        st.error(f"加载 PDF 时出现未知错误: {e}")
 
 # ==============================================================================
 # 页面全局配置
@@ -376,42 +392,49 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     st.markdown("""📌 **怎么做**：再次 14000 g 离心 10 分钟。取上清上机（注：需配合肌酐测定进行后期校正）。""")
 
     # --------------------------------------------------------------------------
-    # 子模块 2：数据采集指南 (LC-MS)
+    # 子模块 2：数据采集指南 (LC-MS) 配合在线 PDF 手册查阅
     # --------------------------------------------------------------------------
     with sub_tab2:
-        st.subheader("📊 仪器配置：岛津 LC-MS 数据采集参数")
+        st.subheader("📊 仪器配置：LC-MS 数据采集参数与操作指引")
+        st.info("💡 请结合下方嵌入的原版《MetDNA非靶向代谢组学操作流程》手册，对照软件截图与文字步骤完成质谱仪的设定与批处理排布。")
         
-        mode = st.radio("请选择液相色谱分离模式：", ["HILIC 模式 (亲水相互作用色谱)", "反相色谱模式 (RPLC)"], horizontal=True)
+        mode = st.radio("请选择当前使用的液相色谱分离模式：", ["HILIC 模式 (亲水相互作用色谱)", "反相色谱模式 (RPLC)"], horizontal=True)
         
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("### 🧪 液相流动相配制标准")
-            if "HILIC" in mode:
-                st.code("""
-色谱柱: Waters BEH Amide
-流动相 A: 水 + 25 mM 乙酸铵 + 25 mM 氨水
-流动相 B: 100% 乙腈
-                """, language="text")
-            else:
-                st.code("""
-色谱柱: Phenomenex Kinetex C18
-流动相 A: 水 + 0.1% 甲酸
-流动相 B: 100% 乙腈 + 0.1% 甲酸
-                """, language="text")
+        # 核心参数快速核对面板
+        with st.expander("✅ 核心参数快速核对面板 (点击展开)"):
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                st.markdown("#### 🧪 流动相与色谱柱")
+                if "HILIC" in mode:
+                    st.markdown("""
+                    * **色谱柱**: Waters BEH Amide (2.1 × 100 mm, 1.7 μm)
+                    * **流速**: 0.5 mL/min (参考手册设定)
+                    * **流动相 A**: 100% H2O + 25 mM CH3COONH4 + 25 mM NH4OH
+                    * **流动相 B**: 100% 乙腈
+                    """)
+                else:
+                    st.markdown("""
+                    * **色谱柱**: Phenomenex Kinetex C18 (2.1 × 100 mm, 2.6 μm)
+                    * **流速**: 0.3 mL/min
+                    * **流动相 A**: 100% H2O + 0.01% 乙酸 (Acetic Acid)
+                    * **流动相 B**: IPA:ACN (v:v = 1:1)
+                    """)
+            with col2:
+                st.markdown("#### ⚡ 质谱源参数 (DDA 模式)")
+                st.markdown("""
+                * **扫描模式**: MS1 SCAN (m/z 60~1200) + MS2 DDA (m/z 25~1200)
+                * **接口温度**: 300 ℃ | **DL 温度**: 250 ℃ | **加热块**: 400 ℃
+                * **雾化气**: 3.0 L/min | **加热气**: 10 L/min | **干燥气**: 10 L/min
+                * **保留时间质控排布**: `Blank` ➔ `QC` ➔ `RTQC` ➔ `Sample_01~10` ➔ `Blank`
+                """)
+
+        st.markdown("---")
+        st.markdown("### 📖 原版操作手册在线查阅")
+        st.caption("您可以直接在下方滚动查看手册原件中的软件截图（如 LabSolutions 格式转换与 Met4DX 提取界面）。")
         
-        with col2:
-            st.markdown("### ⚡ 质谱扫描参数 (DDA 模式)")
-            st.markdown("""
-            * **扫描模式**：MS1 SCAN (m/z 60 ~ 1200) + MS2 DDA (m/z 25 ~ 1200)
-            * **源参数设置**：接口温度 300 ℃ / DL 温度 250 ℃ / 加热块 400 ℃
-            * **气体流量**：雾化气 3.0 L/min / 加热气 10 L/min / 干燥气 10 L/min
-            """)
-            
-        st.markdown("### ⏱️ 保留时间质控 (RTQC) 与日常进样批处理序列")
-        st.markdown("""
-        标准的日批处理序列排布推荐如下：
-        `Blank` -> `QC` -> `RTQC` -> `Sample_001` -> `Sample_002` -> `...` -> `QC`
-        """)
+        # 调用 PDF 渲染函数
+        show_pdf("非靶向代谢组学MetDNA化合物注释操作流程.pdf")
+
 
     # --------------------------------------------------------------------------
     # 子模块 3：原始数据预处理 (Met4DX)
