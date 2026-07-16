@@ -409,7 +409,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     st.markdown("""📌 **怎么做**：再次 14000 g 离心 10 分钟。取上清上机（注：需配合肌酐测定进行后期校正）。""")
 
     # --------------------------------------------------------------------------
-    # 子模块 2：数据采集指南 (LC-MS) - 动态联动版
+    # 子模块 2：数据采集指南 (LC-MS) - 动态目录联动版
     # --------------------------------------------------------------------------
     with sub_tab2:
         st.subheader("📊 仪器配置：参数与操作手册动态联动")
@@ -417,40 +417,36 @@ if main_module == "非靶向代谢组学 (Untargeted)":
         if not PDF_SUPPORT:
             st.error("⚠️ 运行环境缺少 PDF 动态渲染依赖！请在仓库的 requirements.txt 中添加 pypdfium2 和 Pillow。")
         else:
+            # ==================================================================
+            # ⚙️ 核心配置区：请在这里修改您手册各章节对应的真实页码！
+            # 注意：程序中 0 代表第 1 页。例如，如果液相方法在手册第 3 页，这里请填 2。
+            # ==================================================================
+            PDF_TOC_MAPPING = {
+                "第一部分：液相方法 (LC Method) 建立": 0,  # 👈 修改这里的数字
+                "第二部分：质谱方法 (MS Method) 建立": 1,  # 👈 修改这里的数字
+                "第三部分：进样批处理 (Batch Table) 排布": 2, # 👈 修改这里的数字
+                "第四部分：Met4DX 原始数据提取": 3       # 👈 修改这里的数字
+            }
+            
+            # 左侧单选框与右侧目录的映射对应关系
+            STEP_KEYS = list(PDF_TOC_MAPPING.keys())
+            
             col_param, col_pdf = st.columns([1, 1.2]) 
             
+            # ----------- 左侧：参数导航 -----------
             with col_param:
-                st.info("🎯 **操作导航**：请依次点击下方步骤，右侧手册将自动同步至对应页面。")
+                st.info("🎯 **操作导航**：请依次点击下方步骤，右侧手册将自动同步至对应章节。")
                 
+                # 已经修正逻辑：先液相 (LC)，后质谱 (MS)
                 step_selection = st.radio(
                     "请选择当前操作进度：",
-                    [
-                        "第一步：质谱方法 (MS Method) 建立",
-                        "第二步：液相方法 (LC Method) 建立",
-                        "第三步：进样批处理 (Batch Table) 排布",
-                        "第四步：Met4DX 原始数据提取"
-                    ]
+                    STEP_KEYS
                 )
                 
                 st.markdown("---")
                 st.markdown("### 📝 核心参数核对")
                 
-                # 注意：这里的 0, 1, 2, 3 代表 PDF 的第 1, 2, 3, 4 页。
-                if step_selection == "第一步：质谱方法 (MS Method) 建立":
-                    pdf_target_page = 0  
-                    st.success("当前模式：**DDA 扫描模式**")
-                    st.markdown("""
-                    * **扫描范围**: MS1 (m/z 60~1200), MS2 (m/z 25~1200)
-                    * **接口温度**: 300 ℃
-                    * **DL 温度**: 250 ℃
-                    * **加热块温度**: 400 ℃
-                    * **雾化气流量**: 3.0 L/min
-                    * **加热气/干燥气**: 10.0 L/min
-                    """)
-                    st.caption("👉 详情请参考右侧手册关于质谱源参数设定的截图。")
-                    
-                elif step_selection == "第二步：液相方法 (LC Method) 建立":
-                    pdf_target_page = 1  
+                if step_selection == STEP_KEYS[0]: # 液相方法
                     mode = st.selectbox("当前色谱模式：", ["HILIC (极性)", "RPLC (非极性)"])
                     if mode == "HILIC (极性)":
                         st.code("""
@@ -466,10 +462,21 @@ if main_module == "非靶向代谢组学 (Untargeted)":
 流动相 B: IPA:ACN (1:1)
 流速: 0.3 mL/min
                         """, language="text")
-                    st.caption("👉 右侧已为您翻至液相梯度与柱温箱设定页。")
+                    st.caption("👉 右侧已为您跳转至液相梯度与柱温箱设定页。")
+
+                elif step_selection == STEP_KEYS[1]: # 质谱方法
+                    st.success("当前模式：**DDA 扫描模式**")
+                    st.markdown("""
+                    * **扫描范围**: MS1 (m/z 60~1200), MS2 (m/z 25~1200)
+                    * **接口温度**: 300 ℃
+                    * **DL 温度**: 250 ℃
+                    * **加热块温度**: 400 ℃
+                    * **雾化气流量**: 3.0 L/min
+                    * **加热气/干燥气**: 10.0 L/min
+                    """)
+                    st.caption("👉 详情请参考右侧手册关于质谱源参数设定的截图。")
                     
-                elif step_selection == "第三步：进样批处理 (Batch Table) 排布":
-                    pdf_target_page = 2  
+                elif step_selection == STEP_KEYS[2]: # 批处理
                     st.warning("⚠️ **进样前防呆核对**：")
                     st.checkbox("流动相与清洗液体积是否充足？")
                     st.checkbox("仪器真空度与温度是否达标？")
@@ -477,8 +484,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     st.code("Blank ➔ QC ➔ RTQC ➔ Sample_01~10 ➔ Blank ➔ QC", language="text")
                     st.caption("👉 右侧手册展示了 Batch 表格的规范填写示例。")
                     
-                else:
-                    pdf_target_page = 3  
+                else: # Met4DX
                     st.info("数据采集完毕后，需进行格式转换与特征提取。")
                     st.markdown("""
                     1. 将 `.lcd` 转换为 `.mzML` 格式。
@@ -488,16 +494,34 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     """)
                     st.caption("👉 右侧已同步至软件数据处理界面截图。")
 
+            # ----------- 右侧：PDF 手册浏览与目录 -----------
             with col_pdf:
-                # 动态加载对应页码的图片
+                st.markdown("### 📖 原版操作手册阅读器")
+                
+                # 左右布局：左边是目录选择，右边是精准翻页微调
+                col_toc, col_page = st.columns([2, 1])
+                
+                with col_toc:
+                    # 根据左侧的 Radio 选择，自动确定右侧目录的默认索引，实现联动
+                    default_toc_index = STEP_KEYS.index(step_selection)
+                    selected_toc = st.selectbox("📑 快速跳转目录：", STEP_KEYS, index=default_toc_index)
+                
+                with col_page:
+                    # 确定选中目录对应的起始页码
+                    base_page = PDF_TOC_MAPPING[selected_toc]
+                    # 允许用户基于起始页码进行上下微调（用户看到的是自然页码：索引+1）
+                    current_page_input = st.number_input("翻页 (当前页)", min_value=1, value=base_page + 1, step=1)
+                    actual_render_page = current_page_input - 1 # 转换回底层程序的 0 索引
+                
+                # 渲染指定的页面
                 pdf_file_name = "非靶向代谢组学MetDNA化合物注释操作流程.pdf"
-                st.markdown(f"### 📖 原版操作手册 (实时预览 第 {pdf_target_page + 1} 页)")
-                page_image = render_pdf_page(pdf_file_name, pdf_target_page)
+                page_image = render_pdf_page(pdf_file_name, actual_render_page)
                 
                 if page_image:
                     st.image(page_image, use_container_width=True)
                 else:
-                    st.error(f"无法渲染 PDF，请确认 `{pdf_file_name}` 是否已随代码一起上传到了代码仓库的根目录。")
+                    st.error(f"无法渲染 PDF 第 {current_page_input} 页，请确认文件是否存在或页码是否超出了最大页数。")
+
 
 
     # --------------------------------------------------------------------------
