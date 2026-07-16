@@ -3,10 +3,10 @@ import base64
 import io
 
 # ==============================================================================
-# PDF 动态分页渲染函数 (基于 PyMuPDF)
+# PDF 动态分页渲染函数 (已替换为更稳定的 pypdfium2 引擎)
 # ==============================================================================
 try:
-    import fitz  # PyMuPDF
+    import pypdfium2 as pdfium
     from PIL import Image
     PDF_SUPPORT = True
 except ImportError:
@@ -14,16 +14,22 @@ except ImportError:
 
 @st.cache_data(show_spinner=False)
 def render_pdf_page(file_path, page_num):
-    """提取 PDF 的指定页并渲染为图片"""
+    """使用 pypdfium2 将 PDF 指定页渲染为高清图片"""
     try:
-        doc = fitz.open(file_path)
+        # 打开 PDF 文档
+        pdf = pdfium.PdfDocument(file_path)
+        
         # 确保页码不超限
-        page_index = min(page_num, len(doc) - 1)
-        page = doc.load_page(page_index)
-        # dpi=150 保证页面清晰度同时兼顾加载速度
-        pix = page.get_pixmap(dpi=150)
-        img_data = pix.tobytes("png")
-        return Image.open(io.BytesIO(img_data))
+        page_index = min(page_num, len(pdf) - 1)
+        
+        # 加载目标页面
+        page = pdf[page_index]
+        
+        # 渲染页面为位图 (scale=2 代表 2 倍缩放，保证清晰度)
+        bitmap = page.render(scale=2)
+        
+        # 转换为 PIL Image 对象供 Streamlit 渲染
+        return bitmap.to_pil()
     except Exception as e:
         return None
 
@@ -409,7 +415,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
         st.subheader("📊 仪器配置：参数与操作手册动态联动")
         
         if not PDF_SUPPORT:
-            st.error("⚠️ 运行环境缺少 PDF 动态渲染依赖！请在仓库的 requirements.txt 中添加 PyMuPDF 和 Pillow。")
+            st.error("⚠️ 运行环境缺少 PDF 动态渲染依赖！请在仓库的 requirements.txt 中添加 pypdfium2 和 Pillow。")
         else:
             col_param, col_pdf = st.columns([1, 1.2]) 
             
@@ -430,7 +436,6 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                 st.markdown("### 📝 核心参数核对")
                 
                 # 注意：这里的 0, 1, 2, 3 代表 PDF 的第 1, 2, 3, 4 页。
-                # 部署后如果发现截图页码不对，请直接修改下面这个 pdf_target_page 的数字即可。
                 if step_selection == "第一步：质谱方法 (MS Method) 建立":
                     pdf_target_page = 0  
                     st.success("当前模式：**DDA 扫描模式**")
@@ -493,6 +498,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     st.image(page_image, use_container_width=True)
                 else:
                     st.error(f"无法渲染 PDF，请确认 `{pdf_file_name}` 是否已随代码一起上传到了代码仓库的根目录。")
+
 
     # --------------------------------------------------------------------------
     # 子模块 3：原始数据预处理 (Met4DX)
