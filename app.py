@@ -525,24 +525,97 @@ if main_module == "非靶向代谢组学 (Untargeted)":
 
 
     # --------------------------------------------------------------------------
-    # 子模块 3：原始数据预处理 (Met4DX)
+    # 子模块 3：原始数据预处理 (Met4DX) - 贴合实际操作逻辑版
     # --------------------------------------------------------------------------
     with sub_tab3:
-        st.subheader("💻 数据处理：LabSolutions 转换与 Met4DX 提取")
+        st.subheader("💻 数据预处理：LabSolutions 转换与 Met4DX 提取")
         
-        st.markdown("""
-        **1. 格式转换：** 在岛津 LabSolutions 软件中完成采集后，将原始数据（.lcd）一键导出并转换为国际标准质谱开放格式 **.mzML**。
-        
-        **2. Met4DX 工程配置：**
-        * 新建项目（New Project），指定对应的色谱柱类型、离子源模式以及高分辨质谱类型。
-        * 将转换好的 mzML 文件按 `Sample`、`QC`、`Blank` 进行属性归类与分组指定。
-        * 下发峰提取（Peak Picking）与对齐（Alignment）工作流任务。
-        
-        **3. 关键文件导出：** 处理完成后，必须从 Met4DX 软件中严格导出以下 **3 个核心标准文件**，用于接下来的 MetDNA 注释：
-        * `sample.info.csv` —— 包含完整的样本分组及属性映射信息表
-        * `data.csv` —— 包含精确质量数、保留时间及峰面积的 **MS1 峰表**
-        * `spectra.msp` —— 包含二级碎片质谱信息的 **MS/MS 谱图文件**
-        """)
+        # 摒弃多余的启动代码，改为清晰的操作指令指引
+        st.info("🖥️ **操作指引**：请在您本地的电脑上，直接打开 **岛津 LabSolutions** 与 **Met4DX** 软件，并参照下方参数进行配置。")
+        st.markdown("---")
+
+        if not PDF_SUPPORT:
+            st.error("⚠️ 运行环境缺少 PDF 动态渲染依赖！")
+        else:
+            # ==================================================================
+            # ⚙️ 核心配置区：请在这里修改 Met4DX 处理部分在手册中的真实页码！
+            # ==================================================================
+            PDF_TOC_MAPPING_MET4DX = {
+                "第一步：LabSolutions 格式转换 (.mzML)": 4, # 👈 修改这里的数字 (0代表第1页)
+                "第二步：Met4DX 新建项目与导入": 5,        # 👈 修改这里的数字
+                "第三步：特征峰提取与对齐参数": 6,          # 👈 修改这里的数字
+                "第四步：结果矩阵检查与导出": 7             # 👈 修改这里的数字
+            }
+            
+            STEP_KEYS_MET4DX = list(PDF_TOC_MAPPING_MET4DX.keys())
+            
+            col_steps, col_pdf_met4dx = st.columns([1, 1.2]) 
+            
+            with col_steps:
+                step_met4dx = st.radio(
+                    "请选择当前预处理进度：",
+                    STEP_KEYS_MET4DX,
+                    key="met4dx_radio"
+                )
+                
+                st.markdown("---")
+                st.markdown("#### 📝 核心参数与注意事项")
+                
+                if step_met4dx == STEP_KEYS_MET4DX[0]:
+                    st.warning("⚠️ **格式转换关键点**：")
+                    st.markdown("""
+                    - **必须**勾选 MS1 和 MS2 数据一并转换。
+                    - 推荐格式模式：**Centroid (质心图)**，可大幅度缩小 `.mzML` 文件体积，提升后续提取速度。
+                    """)
+                elif step_met4dx == STEP_KEYS_MET4DX[1]:
+                    st.markdown("""
+                    **样本分组规范 (Group Name 设置)**：
+                    - `Sample`：实际生物学实验样本
+                    - `QC`：混合质控样本 (用于校正漂移)
+                    - `Blank`：溶剂空白 (用于扣除系统背景峰)
+                    > *请确保导入文件的命名前缀与分组名称严格对应，避免软件归类错误。*
+                    """)
+                elif step_met4dx == STEP_KEYS_MET4DX[2]:
+                    st.success("🎯 **标准参数核对单**（请直接在软件中对照填写）：")
+                    st.code("""
+Mass Tolerance (MS1) : 15 ppm
+Mass Tolerance (MS2) : 20 ppm
+S/N Ratio Threshold  : > 3
+Minimum Peak Width   : 5 scans
+RT Alignment Tol.    : 0.2 min
+                    """, language="text")
+                else:
+                    st.markdown("""
+                    ✅ **出口检查**：提取完成后，请检查峰型对齐质量。
+                    下一步需要使用云端 MetDNA 进行注释，因此您**必须完整导出以下三个文件**至同一文件夹：
+                    1. 📄 `sample.info.csv` 
+                    2. 📄 `data.csv` 
+                    3. 📄 `spectra.msp` 
+                    """)
+
+            with col_pdf_met4dx:
+                st.markdown("#### 📖 软件操作截图对照")
+                
+                col_toc_m, col_page_m = st.columns([2, 1])
+                
+                with col_toc_m:
+                    default_idx = STEP_KEYS_MET4DX.index(step_met4dx)
+                    selected_toc_m = st.selectbox("📑 快速跳转目录：", STEP_KEYS_MET4DX, index=default_idx, key="met4dx_toc")
+                
+                with col_page_m:
+                    base_page_m = PDF_TOC_MAPPING_MET4DX[selected_toc_m]
+                    current_page_m = st.number_input("翻页 (当前页)", min_value=1, value=base_page_m + 1, step=1, key="met4dx_page")
+                    actual_render_page_m = current_page_m - 1
+                
+                # 渲染指定的页面
+                page_image_m = render_pdf_page(pdf_file_name, actual_render_page_m)
+                
+                if page_image_m:
+                    st.image(page_image_m, use_container_width=True)
+                else:
+                    st.error(f"无法渲染 PDF 第 {current_page_m} 页，请确认页码配置是否正确。")
+
+
 
     # --------------------------------------------------------------------------
     # 子模块 4：化合物智能注释 (MetDNA)
