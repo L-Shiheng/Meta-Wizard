@@ -564,7 +564,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                 if step_met4dx == STEP_KEYS_MET4DX[0]:
                     st.warning("⚠️ **格式转换关键点**：")
                     st.markdown("""
-                    - **必须**勾选 MS1 和 MS2 数据一并转换。
+                    - 选中需要转换的数据文件后，**右键**单击选择转换成mzML。
                     - 推荐格式模式：**Centroid (质心图)**，可大幅度缩小 `.mzML` 文件体积，提升后续提取速度。
                     """)
                 elif step_met4dx == STEP_KEYS_MET4DX[1]:
