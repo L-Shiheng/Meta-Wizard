@@ -565,7 +565,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
                     st.warning("⚠️ **格式转换关键点**：")
                     st.markdown("""
                     - 选中需要转换的数据文件后，**右键**单击选择转换成mzML。
-                    - 推荐格式模式：**Centroid (质心图)**，可大幅度缩小 `.mzML` 文件体积，提升后续提取速度。
+                    - 格式模式：**Centroid (重心)**。
                     """)
                 elif step_met4dx == STEP_KEYS_MET4DX[1]:
                     st.markdown("""
