@@ -525,7 +525,7 @@ if main_module == "非靶向代谢组学 (Untargeted)":
 
 
     # --------------------------------------------------------------------------
-    # 子模块 3：原始数据预处理 (Met4DX) (已修复联动逻辑)
+    # 子模块 3：原始数据预处理 (Met4DX) - 独立闭环版（防 NameError）
     # --------------------------------------------------------------------------
     with sub_tab3:
         st.subheader("💻 数据预处理：LabSolutions 转换与 Met4DX 提取")
@@ -535,6 +535,35 @@ if main_module == "非靶向代谢组学 (Untargeted)":
         if not PDF_SUPPORT:
             st.error("⚠️ 运行环境缺少 PDF 动态渲染依赖！")
         else:
+            # 1. ==== 将所需的所有变量和回调函数，直接定义在当前步骤内部 ====
+            PDF_TOC_MAPPING_MET4DX = {
+                "第一步：LabSolutions 格式转换 (.mzML)": 4, 
+                "第二步：Met4DX 新建项目与导入": 5,        
+                "第三步：特征峰提取与对齐参数": 6,          
+                "第四步：结果矩阵检查与导出": 7             
+            }
+            STEP_KEYS_MET4DX = list(PDF_TOC_MAPPING_MET4DX.keys())
+
+            # 状态初始化
+            if "met4dx_radio" not in st.session_state:
+                st.session_state["met4dx_radio"] = STEP_KEYS_MET4DX[0]
+            if "met4dx_toc" not in st.session_state:
+                st.session_state["met4dx_toc"] = STEP_KEYS_MET4DX[0]
+            if "met4dx_page" not in st.session_state:
+                st.session_state["met4dx_page"] = PDF_TOC_MAPPING_MET4DX[STEP_KEYS_MET4DX[0]] + 1
+
+            # 定义联动回调函数
+            def sync_met4dx_from_radio():
+                val = st.session_state["met4dx_radio"]
+                st.session_state["met4dx_toc"] = val
+                st.session_state["met4dx_page"] = PDF_TOC_MAPPING_MET4DX[val] + 1
+
+            def sync_met4dx_from_toc():
+                val = st.session_state["met4dx_toc"]
+                st.session_state["met4dx_radio"] = val
+                st.session_state["met4dx_page"] = PDF_TOC_MAPPING_MET4DX[val] + 1
+
+            # 2. ==== 界面渲染部分 ====
             col_steps, col_pdf_met4dx = st.columns([1, 1.2]) 
             
             with col_steps:
@@ -605,8 +634,11 @@ RT Alignment Tol.    : 0.2 min
                     )
                     actual_render_page_m = current_page_m - 1
                 
+                # 显式声明 PDF 文件名，防止跨标签页调用丢失
+                pdf_file_name_met4dx = "非靶向代谢组学MetDNA化合物注释操作流程.pdf"
+                
                 # 渲染指定的页面
-                page_image_m = render_pdf_page(pdf_file_name, actual_render_page_m)
+                page_image_m = render_pdf_page(pdf_file_name_met4dx, actual_render_page_m)
                 
                 if page_image_m:
                     st.image(page_image_m, use_container_width=True)
